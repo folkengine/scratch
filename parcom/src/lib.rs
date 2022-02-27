@@ -59,15 +59,14 @@ mod pc {
         P1: Parser<'a, R1>,
         P2: Parser<'a, R2>,
     {
-        move |input| match parser1.parse(input) {
-            Ok((next_input, result1)) => match parser2.parse(next_input) {
-                Ok((final_input, result2)) => Ok((final_input, (result1, result2))),
-                Err(err) => Err(err),
-            },
-            Err(err) => Err(err),
+        move |input| {
+            parser1.parse(input).and_then(|(next_input, result1)| {
+                parser2.parse(next_input).map(|(last_input, result2)| (last_input, (result1, result2)))
+            })
         }
     }
 
+    #[allow(dead_code)]
     pub fn map<'a, P, F, A, B>(parser: P, map_fn: F) -> impl Parser<'a, B>
     where
         P: Parser<'a, A>,
@@ -76,6 +75,22 @@ mod pc {
         move |input|
             parser.parse(input)
                 .map(|(next_input, result)| (next_input, map_fn(result)))
+    }
+
+    pub fn left<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R1>
+    where
+        P1: Parser<'a, R1>,
+        P2: Parser<'a, R2>,
+    {
+        map(pair(parser1, parser2), |(left, _right)| left)
+    }
+
+    pub fn right<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R2>
+    where
+        P1: Parser<'a, R1>,
+        P2: Parser<'a, R2>,
+    {
+        map(pair(parser1, parser2), |(_left, right)| right)
     }
 }
 
