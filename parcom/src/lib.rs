@@ -23,8 +23,8 @@ where
 mod pc {
     use crate::Parser;
 
-    pub fn match_literal(expected: &'static str) -> impl Fn(&str) -> Result<(&str, ()), &str> {
-        move |input| match input.get(0..expected.len()) {
+    pub fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
+        move |input: &'a str| match input.get(0..expected.len()) {
             Some(next) if next == expected => Ok((&input[expected.len()..], ())),
             _ => Err(input),
         }
@@ -102,12 +102,12 @@ mod tests {
     #[test]
     fn match_literal() {
         let parse_joe = pc::match_literal("Hello Joe!");
-        assert_eq!(Ok(("", ())), parse_joe("Hello Joe!"));
+        assert_eq!(Ok(("", ())), parse_joe.parse("Hello Joe!"));
         assert_eq!(
             Ok((" Hello Robert!", ())),
-            parse_joe("Hello Joe! Hello Robert!")
+            parse_joe.parse("Hello Joe! Hello Robert!")
         );
-        assert_eq!(Err("Hello Mike!"), parse_joe("Hello Mike!"));
+        assert_eq!(Err("Hello Mike!"), parse_joe.parse("Hello Mike!"));
     }
 
     #[test]
