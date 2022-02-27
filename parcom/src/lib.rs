@@ -21,7 +21,7 @@ where
 }
 
 mod pc {
-    use crate::Parser;
+    use crate::{Parser, ParseResult};
 
     pub fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
         move |input: &'a str| match input.get(0..expected.len()) {
@@ -30,7 +30,7 @@ mod pc {
         }
     }
 
-    pub fn identifier(input: &str) -> Result<(&str, String), &str> {
+    pub fn identifier(input: &str) -> ParseResult<String> {
         let mut matched = String::new();
         let mut chars = input.chars();
 
