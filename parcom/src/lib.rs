@@ -21,7 +21,7 @@ where
 }
 
 mod pc {
-    use crate::{Parser, ParseResult};
+    use crate::{ParseResult, Parser};
 
     pub fn match_literal<'a>(expected: &'static str) -> impl Parser<'a, ()> {
         move |input: &'a str| match input.get(0..expected.len()) {
@@ -51,17 +51,16 @@ mod pc {
         Ok((&input[next_index..], matched))
     }
 
-    pub fn pair<'a, P1, P2, R1, R2>(
-        parser1: P1,
-        parser2: P2,
-    ) -> impl Parser<'a, (R1, R2)>
+    pub fn pair<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, (R1, R2)>
     where
         P1: Parser<'a, R1>,
         P2: Parser<'a, R2>,
     {
         move |input| {
             parser1.parse(input).and_then(|(next_input, result1)| {
-                parser2.parse(next_input).map(|(last_input, result2)| (last_input, (result1, result2)))
+                parser2
+                    .parse(next_input)
+                    .map(|(last_input, result2)| (last_input, (result1, result2)))
             })
         }
     }
@@ -72,9 +71,11 @@ mod pc {
         P: Parser<'a, A>,
         F: Fn(A) -> B,
     {
-        move |input|
-            parser.parse(input)
+        move |input| {
+            parser
+                .parse(input)
                 .map(|(next_input, result)| (next_input, map_fn(result)))
+        }
     }
 
     pub fn left<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R1>
@@ -131,6 +132,17 @@ mod tests {
         let tag_opener = pc::pair(pc::match_literal("<"), pc::identifier);
         assert_eq!(
             Ok(("/>", ((), "my-first-element".to_string()))),
+            tag_opener.parse("<my-first-element/>")
+        );
+        assert_eq!(Err("oops"), tag_opener.parse("oops"));
+        assert_eq!(Err("!oops"), tag_opener.parse("<!oops"));
+    }
+
+    #[test]
+    fn right() {
+        let tag_opener = pc::right(pc::match_literal("<"), pc::identifier);
+        assert_eq!(
+            Ok(("/>", "my-first-element".to_string())),
             tag_opener.parse("<my-first-element/>")
         );
         assert_eq!(Err("oops"), tag_opener.parse("oops"));
